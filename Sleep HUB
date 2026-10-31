@@ -1,0 +1,597 @@
+-- ============================================================
+-- sleep hub 💸 | Block spin 🔫  (Full Code & Full Logic Integration)
+-- ============================================================
+
+local WindUI = loadstring(game:HttpGet(
+  "https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"
+))()
+
+-- สร้างหน้าต่างหลัก
+local window = WindUI:CreateWindow({
+  Title = "sleep hub 💸 | Block spin 🔫",
+  Icon = "rbxassetid://114252453097221",
+  Author = "sleep hub | Community",
+  Folder = "sleepHUB",
+  Size = UDim2.fromOffset(600, 360),
+  Theme = "Dark",
+  Transparent = true,
+  Resizable = true,
+  KeyCode = Enum.KeyCode.L,
+  User = { Enabled = false },
+  SideBarWidth = 180,
+  HasOutline = true,
+})
+
+-- ปุ่มเปิด/ปิด UI บนมือถือ (Mobile Toggle Button)
+pcall(function()
+  window:EditOpenButton({
+    Title = "sleep hub 💸",
+    Icon = "rbxassetid://114252453097221",
+    CornerRadius = UDim.new(0, 12),
+    StrokeThickness = 2,
+    Color = ColorSequence.new(Color3.fromHex("#8A2BE2"), Color3.fromHex("#4B0082")),
+    OnlyMobile = false,
+    Enabled = true,
+    Draggable = true,
+  })
+end)
+
+-- Tag มุมขวาบน
+pcall(function()
+  window:Tag({
+    Title = "PVP | VIP",
+    Color = Color3.fromHex("#ac30ff"),
+  })
+end)
+
+-- ============================================================
+-- SERVICES & ALIASES
+-- ============================================================
+local players            = game:GetService("Players")
+local starterGui         = game:GetService("StarterGui")
+local runService         = game:GetService("RunService")
+local replicatedStorage  = game:GetService("ReplicatedStorage")
+local userInputService   = game:GetService("UserInputService")
+local tweenService       = game:GetService("TweenService")
+local debris             = game:GetService("Debris")
+local workspaceService   = game:GetService("Workspace")
+local contextActionService = game:GetService("ContextActionService")
+local teleportService    = game:GetService("TeleportService")
+local httpService        = game:GetService("HttpService")
+
+local a = players
+local b = runService
+local c = replicatedStorage
+local d = userInputService
+local e = tweenService
+local f = debris
+local g = workspaceService
+local h = contextActionService
+local i = c:WaitForChild("Remotes")
+local j = require(c.Modules.Core.Util)
+local k = require(c.Modules.Game.UI.BuyPromptUI)
+local l = require(c.Modules.Game.Emotes.EmotesUI)
+local m = require(c.Modules.Game.Emotes.EmotesList)
+local n = require(c.Modules.Core.UI)
+local o = require(c.Modules.Core.Char)
+local p = c:WaitForChild("Items")
+local q = p:WaitForChild("melee")
+local r = a.LocalPlayer
+local s = r.Character or r.CharacterAdded:Wait()
+local t = s:WaitForChild("Humanoid")
+local u = s:WaitForChild("HumanoidRootPart")
+local v = a.LocalPlayer
+local v1 = {}
+local x = workspace:WaitForChild("DroppedItems")
+local y = g.CurrentCamera
+local z = d.TouchEnabled and not d.KeyboardEnabled
+
+-- ============================================================
+-- GLOBALS & STATES
+-- ============================================================
+F = false
+TracerESP = nil
+enabled = false
+highlightEnabled = false
+highlights = {}
+_snapMode = "down"
+_G.MultiShoot = false
+_G.AutoHealEnabled = false
+_G.HealLoopStarted = false
+
+local lineLock = false
+local fov = 120
+local line = Drawing.new("Line")
+line.Thickness = 1
+line.Color = Color3.fromRGB(255, 50, 50)
+line.Transparency = 1
+line.Visible = false
+
+local v3 = {}
+local name = false
+local distance = false
+local health = false
+local safeFriend = {}
+local walkSpeed = false
+local speedMultiplier = 0.05
+local v4 = false
+local v5 = false
+local v6 = 10
+local count = 0
+local autoFinnish = false
+local v7 = getgenv or function() return _G end
+
+v7().Sky = false
+v7().SkyAmount = 1000
+
+local v10 = {
+  Common    = Color3.fromRGB(255, 255, 255),
+  Uncommon  = Color3.fromRGB(99, 255, 52),
+  Rare      = Color3.fromRGB(51, 170, 255),
+  Epic      = Color3.fromRGB(237, 44, 255),
+  Legendary = Color3.fromRGB(255, 150, 0),
+  Omega     = Color3.fromRGB(255, 20, 51),
+}
+local v11 = {}
+local v12 = {}
+local v13 = false
+local meleeAura = false
+local v14 = {}
+local v15 = {}
+local v16 = "Head"
+local v17 = false
+local v18 = 1
+local v19 = 3
+local random = 65
+local v20
+
+-- ============================================================
+-- CORE FUNCTIONS (ฟังก์ชันระบบหลังบ้านฉบับเต็ม)
+-- ============================================================
+
+local function f1()
+  local v8 = o.current_char.get()
+  if not v8 then return end
+  return v8:FindFirstChild("HumanoidRootPart")
+end
+
+local function f2()
+  local v9 = o.get_hum()
+  if not v9 then return false
+  elseif v9.Health <= 0 then return false
+  else return v9:GetAttribute("HasBeenDowned") or v9:GetAttribute("IsDead") end
+end
+
+local function createHighlight(character)
+  if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
+  local hl = Instance.new("Highlight")
+  hl.Name = "PlayerHighlight"
+  hl.Adornee = character
+  hl.FillColor = Color3.fromRGB(136, 0, 153)
+  hl.OutlineColor = Color3.fromRGB(136, 0, 153)
+  hl.Parent = workspace
+  return hl
+end
+
+local function updateHighlights()
+  for plr, hl in pairs(highlights) do
+    if not plr or not plr.Parent
+      or not plr.Character
+      or not plr.Character:FindFirstChild("HumanoidRootPart") then
+      if hl and hl.Destroy then hl:Destroy() end
+      highlights[plr] = nil
+    end
+  end
+end
+
+local function f3(p2, p3)
+  local v21 = p3 - p2
+  if v21.Magnitude < 1 then return false end
+  local v22 = {}
+  local character = r.Character
+  if character then table.insert(v22, character) end
+  local character2 = v20 and v20.Character
+  if character2 then table.insert(v22, character2) end
+  local raycast = workspace:Raycast(p2, v21, RaycastParams.new())
+  if not raycast then return false end
+  local instance = raycast.Instance
+  return instance and not table.find(v22, instance.Parent)
+end
+
+local function f4()
+  local playerGui = r:FindFirstChild("PlayerGui")
+  if not playerGui then return 0.2 end
+  local networkStats = playerGui:FindFirstChild("NetworkStats")
+  if not networkStats then return 0.2 end
+  local pingLabel = networkStats:FindFirstChild("PingLabel")
+  if not pingLabel then return 0.2 end
+  local text = pingLabel.Text
+  if typeof(text) ~= "string" then return 0.2 end
+  local v23 = tonumber(text:match("%d+"))
+  if not v23 then return 0.2 end
+  local v24 = v23 / 1000
+  if v24 < 0 or v24 > 2 then v24 = 0.2 end
+  return v24
+end
+
+local function f5(p4)
+  for _, value in ipairs(safeFriend) do
+    if value ~= "" and string.find(string.lower(p4), string.lower(value)) then
+      return true
+    end
+  end
+  return false
+end
+
+local function f6()
+  local v25 = fov
+  local vector = Vector2.new(y.ViewportSize.X / 2, y.ViewportSize.Y / 2)
+  local v26 = a
+  local v27
+  for _, value2 in ipairs(v26:GetPlayers()) do
+    if value2 ~= r and value2.Character then
+      local head = value2.Character:FindFirstChild("Head")
+      local humanoid = value2.Character:FindFirstChild("Humanoid")
+      local humanoidRootPart = value2.Character:FindFirstChild("HumanoidRootPart")
+      if head and humanoid and humanoid.Health > 0 and humanoidRootPart then
+        local v28, v29 = y:WorldToViewportPoint(head.Position)
+        if v29 then
+          local magnitude = (Vector2.new(v28.X, v28.Y) - vector).Magnitude
+          if magnitude <= fov and not f5(value2.Name) then
+            if magnitude < v25 then
+              v27 = value2
+              v25 = magnitude
+            end
+          end
+        end
+      end
+    end
+  end
+  return v27
+end
+
+local connect
+local function f7(p5)
+  s = p5
+  t = p5:WaitForChild("Humanoid")
+  u = p5:WaitForChild("HumanoidRootPart")
+  if connect then pcall(function() connect:Disconnect() end) end
+  connect = b.RenderStepped:Connect(function()
+    if walkSpeed and t and u then
+      if t.MoveDirection.Magnitude > 0 then
+        u.CFrame = u.CFrame + t.MoveDirection.Unit * speedMultiplier
+      end
+    end
+  end)
+end
+
+local v30
+local function f8()
+  local v31 = f1()
+  if not v31 then return end
+  if not v30 then v30 = v31.CFrame + Vector3.new(0, -100, 0) end
+  v31.CFrame = CFrame.new(v30.Position)
+end
+
+local function f9(p6)
+  if v3[p6] then return end
+  local text2 = Drawing.new("Text")
+  text2.Size = 16
+  text2.Center = true
+  text2.Outline = true
+  text2.Color = f5(p6.Name) and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
+  text2.Font = 4
+  local text3 = Drawing.new("Text")
+  text3.Size = 14
+  text3.Center = true
+  text3.Outline = true
+  text3.Color = Color3.fromRGB(255, 255, 255)
+  text3.Font = 4
+  local square = Drawing.new("Square")
+  square.Filled = false
+  square.Thickness = 1
+  square.Color = Color3.fromRGB(0, 0, 0)
+  square.Transparency = 0.9
+  square.Visible = false
+  local square2 = Drawing.new("Square")
+  square2.Filled = true
+  square2.Transparency = 0.9
+  square2.Visible = false
+  local v32 = { text2, text3, square, square2 }
+  v3[p6] = {
+    conn = b.RenderStepped:Connect(function()
+      if not p6 or not p6.Character or not p6.Character:FindFirstChild("HumanoidRootPart") then
+        for _, value3 in pairs(v32) do value3.Visible = false end
+        return
+      else
+        local humanoidRootPart2 = p6.Character.HumanoidRootPart
+        local humanoid2 = p6.Character:FindFirstChild("Humanoid")
+        local magnitude2 = 0
+        if r.Character and r.Character:FindFirstChild("HumanoidRootPart") then
+          magnitude2 = (humanoidRootPart2.Position - r.Character.HumanoidRootPart.Position).Magnitude
+        end
+        local v33, v34 = y:WorldToViewportPoint(humanoidRootPart2.Position)
+        if not v34 or v33.Z <= 0 then
+          for _, value4 in pairs(v32) do value4.Visible = false end
+          return
+        else
+          local v35 = v33.X
+          local v36 = v33.Y - 15
+          if health and humanoid2 and humanoid2.Health > 0 then
+            local v37 = humanoid2.Health / (humanoid2.MaxHealth > 0 and humanoid2.MaxHealth or 1)
+            local v38 = v35 - 30
+            square.Position = Vector2.new(v38, v36 - 4 - 2)
+            square.Size = Vector2.new(60, 4)
+            square.Visible = true
+            square2.Position = Vector2.new(v38, v36 - 4 - 2)
+            square2.Size = Vector2.new(60 * v37, 4)
+            square2.Color = Color3.fromHSV(v37 * 0.333, 0.8, 0.9)
+            square2.Visible = true
+            v36 = v36 - 4 - 6
+          else
+            square.Visible = false
+            square2.Visible = false
+          end
+          if name then
+            local v39 = math.clamp(magnitude2 / 50, 0, 1)
+            text2.Text = p6.Name
+            text2.Size = math.floor(42 - 28 * v39)
+            text2.Color = f5(p6.Name) and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
+            text2.Outline = true
+            text2.Position = Vector2.new(v35, v36 - 16)
+            text2.Visible = true
+          else
+            text2.Visible = false
+          end
+          text3.Text = distance and string.format("%.0f studs", magnitude2) or ""
+          text3.Position = Vector2.new(v35, v33.Y + 20)
+          text3.Visible = distance
+          return
+        end
+      end
+    end),
+    drawings = v32,
+  }
+end
+
+local function f10(p7, p8) if not s then return end end
+
+local function f11(p9)
+  if p9 and p9:IsA("ProximityPrompt") then
+    p9.HoldDuration = 1
+    p9.MaxActivationDistance = 20
+  end
+end
+
+local v40 = false
+local function f12()
+  if v40 then return end
+  v40 = true
+  task.spawn(function()
+    while v40 do task.wait(0.4) end
+  end)
+end
+
+local v41
+local function f13()
+  if not u then return end
+  local position = u.Position
+  local vector2 = Vector3.new(position.X, position.Y - v6, position.Z)
+  u.CFrame = CFrame.new(vector2)
+  v41 = vector2.Y
+  local sound = Instance.new("Sound")
+  sound.SoundId = "rbxassetid://108156925383225"
+  sound.Volume = 1
+  sound.PlayOnRemove = true
+  sound.Parent = u
+  sound:Destroy()
+  f10(position, 1.5)
+  f10(vector2, 2)
+end
+
+local connect2 = nil
+local function f14()
+  if connect2 then pcall(function() connect2:Disconnect() end) end
+  connect2 = b.Heartbeat:Connect(function()
+    if v4 and v41 and u then
+      local humanoid3 = r.Character and r.Character:FindFirstChildOfClass("Humanoid")
+      if humanoid3 and humanoid3.SeatPart and humanoid3.SeatPart.ClassName == "VehicleSeat" then return end
+      local position2 = u.Position
+      if math.abs(position2.Y - v41) > 0.1 then
+        u.CFrame = CFrame.new(position2.X, v41, position2.Z)
+      end
+      return
+    end
+  end)
+end
+
+local function f15()
+  if not v5 then return end
+  v4 = not v4
+  if v4 then f13() else v41 = nil end
+end
+
+local function f16(p10, p11)
+  if not p10 or p10:GetAttribute("__AutoFinishBusy") then return end
+  p10:SetAttribute("__AutoFinishBusy", true)
+  pcall(function() if p10.InputHoldBegin then p10:InputHoldBegin() end end)
+  pcall(function() if p10.HoldBegin then p10:HoldBegin() end end)
+  pcall(function() if p10.Trigger then p10:Trigger() end end)
+  task.wait(p11)
+  pcall(function() if p10.InputHoldEnd then p10:InputHoldEnd() end end)
+  pcall(function() if p10.HoldEnd then p10:HoldEnd() end end)
+  p10:SetAttribute("__AutoFinishBusy", nil)
+end
+
+local function f17(p12)
+  local handle = p12:FindFirstChild("Handle")
+  local displayName = p12:GetAttribute("DisplayName") or p12.Name
+  local itemId = p12:GetAttribute("ItemId") or p12:GetAttribute("Id") or p12.Name
+  local rarityName = p12:GetAttribute("RarityName") or "Common"
+  local v42
+  if handle then
+    local specialMesh = handle:FindFirstChildOfClass("SpecialMesh")
+    if specialMesh and specialMesh.MeshId ~= "" then
+      return specialMesh.MeshId .. (specialMesh.TextureId or "") .. "_RARITY_" .. rarityName
+    end
+    if handle:IsA("MeshPart") and handle.MeshId ~= "" then
+      return handle.MeshId .. (handle.TextureID or "") .. "_RARITY_" .. rarityName
+    end
+    v42 = itemId
+    v42 = itemId and itemId ~= "" and itemId ~= p12.Name
+    if v42 then return "ITEMID_" .. itemId .. "_RARITY_" .. rarityName end
+    return "NAME_" .. displayName .. "_" .. p12.Name .. "_RARITY_" .. rarityName
+  end
+  v42 = itemId
+  v42 = itemId and itemId ~= "" and itemId ~= p12.Name
+  if v42 then return "ITEMID_" .. itemId .. "_RARITY_" .. rarityName end
+  return "NAME_" .. displayName .. "_" .. p12.Name .. "_RARITY_" .. rarityName
+end
+
+local function f18(p13)
+  for _, value5 in ipairs(p13:GetChildren()) do
+    if value5:IsA("Tool") then
+      local handle2 = value5:FindFirstChild("Handle")
+      local v43 = nil
+      local displayName2 = value5:GetAttribute("DisplayName") or value5.Name
+      local itemId2 = value5:GetAttribute("ItemId")
+      local id = itemId2 or value5:GetAttribute("Id") or value5.Name
+      local rarityName2 = value5:GetAttribute("RarityName") or "Common"
+      local imageId = value5:GetAttribute("ImageId") or "rbxassetid://7072725737"
+      if handle2 then
+        local specialMesh2 = handle2:FindFirstChildOfClass("SpecialMesh")
+        if specialMesh2 and specialMesh2.MeshId ~= "" then
+          v43 = specialMesh2.MeshId .. (specialMesh2.TextureId or "") .. "_RARITY_" .. rarityName2
+        elseif handle2:IsA("MeshPart") and handle2.MeshId ~= "" then
+          v43 = handle2.MeshId .. (handle2.TextureID or "") .. "_RARITY_" .. rarityName2
+        end
+      end
+      if not v43 and id and id ~= "" and id ~= value5.Name then
+        v43 = "ITEMID_" .. id .. "_RARITY_" .. rarityName2
+      end
+      if not v43 then
+        v43 = "NAME_" .. displayName2 .. "_" .. value5.Name .. "_RARITY_" .. rarityName2
+      end
+      v11[v43] = {
+        Name = displayName2,
+        Rarity = rarityName2,
+        ImageId = imageId,
+        ToolName = value5.Name,
+      }
+    end
+  end
+end
+
+local f19
+local function f20(p14)
+  if not v13 or p14 == r then return end
+  local character3 = p14.Character
+  if not character3 then return end
+  local humanoidRootPart3 = character3:FindFirstChild("HumanoidRootPart")
+  if not humanoidRootPart3 then return end
+  if v12[p14] then v12[p14]:Destroy(); v12[p14] = nil end
+  local billboardGui = Instance.new("BillboardGui")
+  billboardGui.Adornee = humanoidRootPart3
+  billboardGui.Size = UDim2.new(0, 90, 0, 20)
+  billboardGui.StudsOffset = Vector3.new(0, -5, 0)
+  billboardGui.AlwaysOnTop = true
+  billboardGui.Parent = character3
+  billboardGui:ClearAllChildren()
+  local instance2 = Instance.new("UIListLayout", billboardGui)
+  instance2.FillDirection = Enum.FillDirection.Horizontal
+  instance2.SortOrder = Enum.SortOrder.LayoutOrder
+  instance2.Padding = UDim.new(0, 5)
+  instance2.HorizontalAlignment = Enum.HorizontalAlignment.Center
+  local v44 = {}
+  for _, value6 in ipairs({ "Backpack", "StarterGear", "StarterPack" }) do
+    local findFirstChild = p14:FindFirstChild(value6)
+    if findFirstChild then
+      for _, value7 in ipairs(findFirstChild:GetChildren()) do
+        if value7:IsA("Tool") and value7.Name ~= "Fists" then table.insert(v44, value7) end
+      end
+    end
+  end
+  for _, value8 in ipairs(character3:GetChildren()) do
+    if value8:IsA("Tool") and value8.Name ~= "Fists" then table.insert(v44, value8) end
+  end
+  for _, value9 in ipairs(v44) do
+    local v45 = f19(value9)
+    if v45 then
+      local instance3 = Instance.new("ImageLabel", billboardGui)
+      instance3.Size = UDim2.new(0, 20, 0, 20)
+      instance3.BackgroundTransparency = 0.1
+      instance3.Image = v45.ImageId
+      instance3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+      Instance.new("UICorner", instance3).CornerRadius = UDim.new(0, 5)
+      local instance4 = Instance.new("UIStroke", instance3)
+      instance4.Color = v10[v45.Rarity] or Color3.new(1, 1, 1)
+      instance4.Thickness = 2
+    end
+  end
+  v12[p14] = billboardGui
+end
+
+function f19(p15)
+  if not p15 or not p15:IsA("Tool") then return nil end
+  return v11[f17(p15)]
+end
+
+local function f21()
+  for _, value10 in ipairs(a:GetPlayers()) do
+    if value10 ~= r and value10.Character then
+      local humanoidRootPart4 = value10.Character:FindFirstChild("HumanoidRootPart")
+      if humanoidRootPart4 then
+        local finishPrompt = humanoidRootPart4:FindFirstChild("FinishPrompt")
+        if finishPrompt then f11(finishPrompt) end
+      end
+    end
+  end
+end
+
+local function f22()
+  local v46 = {}
+  for _, value11 in pairs(workspace:GetChildren()) do
+    local getPlayerFromCharacter = a:GetPlayerFromCharacter(value11)
+    if getPlayerFromCharacter and not f5(getPlayerFromCharacter.Name) then
+      local humanoidRootPart5 = value11:FindFirstChild("HumanoidRootPart")
+      if humanoidRootPart5 then
+        local finishPrompt2 = humanoidRootPart5:FindFirstChild("FinishPrompt")
+        if finishPrompt2 then
+          f11(finishPrompt2)
+          table.insert(v46, finishPrompt2)
+        end
+      end
+    end
+  end
+  return v46
+end
+
+local function f23(p16)
+  if p16 ~= r then
+    p16.CharacterAdded:Connect(function(character4)
+      character4.DescendantAdded:Connect(function(descendant)
+        if autoFinnish and descendant.Name == "FinishPrompt"
+          and descendant:IsA("ProximityPrompt") and descendant.Parent
+          and descendant.Parent.Name == "HumanoidRootPart" then
+          f11(descendant)
+        end
+      end)
+      local waitForChild = character4:WaitForChild("HumanoidRootPart", 5)
+      if waitForChild and autoFinnish then
+        local finishPrompt3 = waitForChild:FindFirstChild("FinishPrompt")
+        if finishPrompt3 then f11(finishPrompt3) end
+      end
+    end)
+    if p16.Character then
+      local character5 = p16.Character
+      character5.DescendantAdded:Connect(function(descendant2)
+        if autoFinnish and descendant2.Name == "FinishPrompt"
+          and descendant2:IsA("ProximityPrompt") and descendant2.Parent
+          and descendant2.Parent.Name == "HumanoidRootPart" then
+          f11(descendant2)
+        end
+      end)
+      local humanoidRootPart6 = character5:FindFirstChild("HumanoidRootPart")
+      if humanoidRootPart6 and autoFinnish then
+        local finishPrompt4 = humanoidRootPart6:FindFirstChild("FinishPrompt")
+       
